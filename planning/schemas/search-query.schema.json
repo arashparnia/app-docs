@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SearchQuery",
+  "description": "Tiny structured output used to translate a natural-language query ('all my tax documents for 2024', 'the dentist bill from last spring') into filters. Fired in parallel with the deterministic on-device parser; results re-render only if the set changes.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["doc_types", "date_from", "date_to", "tax_year", "sender_contains", "amount_min", "amount_max", "tags", "free_text", "sort"],
+  "properties": {
+    "doc_types": { "type": "array", "items": { "type": "string" } },
+    "date_from": { "type": ["string", "null"], "format": "date" },
+    "date_to": { "type": ["string", "null"], "format": "date" },
+    "tax_year": { "type": ["integer", "null"] },
+    "sender_contains": { "type": ["string", "null"] },
+    "amount_min": { "type": ["number", "null"] },
+    "amount_max": { "type": ["number", "null"] },
+    "tags": { "type": "array", "items": { "type": "string" } },
+    "free_text": { "type": ["string", "null"] },
+    "sort": { "type": "string", "enum": ["relevance", "date_desc", "date_asc", "amount_desc"] }
+  }
+}

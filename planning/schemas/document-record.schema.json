@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DocumentRecord",
+  "description": "Structured output returned by Claude for each captured page, appended to the open document's prompt-cached conversation. Property order is deliberate: structured outputs stream required properties in schema order, so doc_type arrives first and the UI can label the page before the rest of the JSON lands. Every property is required and nullable (optional properties count against the strict-schema complexity limit). No 'reasoning' field: asking for reasoning can trigger a reasoning_extraction refusal. All identifiers are last-4 placeholders; full secrets never leave the device (see 02-architecture.md, section 12).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "doc_type", "continues_open_document", "boundary_confidence", "suggested_merge_with", "expected_page_count",
+    "page_role", "doc_subtype", "language", "sender", "recipient",
+    "document_date", "due_date", "period_start", "period_end", "tax_year",
+    "amounts", "identifiers", "people", "organizations", "tags",
+    "title", "summary", "keep_original", "sensitive", "corrections",
+    "confidence", "needs_review", "review_reason"
+  ],
+  "properties": {
+    "doc_type": {
+      "type": "string",
+      "enum": [
+        "tax_form", "tax_notice", "property_tax", "bank_statement", "credit_card_statement", "bank_notice",
+        "investment_statement", "insurance_policy", "insurance_eob", "medical_bill", "medical_record", "prescription",
+        "utility_bill", "government_letter", "housing", "legal", "employment", "education", "vehicle",
+        "subscription_membership", "receipt", "warranty_manual", "personal_correspondence", "marketing",
+        "payment_instrument", "shipping", "id_document", "certificate", "envelope", "blank", "other"
+      ]
+    },
+    "continues_open_document": {
+      "type": "boolean",
+      "description": "true if this page belongs to the document whose earlier pages are in this conversation; false if it starts a new document."
+    },
+    "boundary_confidence": { "type": "number", "description": "0.0-1.0 confidence in continues_open_document. The device auto-merges or auto-splits only at >= 0.8." },
+    "suggested_merge_with": { "type": ["string", "null"], "description": "document id (from the context block) this page most likely belongs to when it is not the open document, else null." },
+    "expected_page_count": { "type": ["integer", "null"], "description": "From 'Page N of M' or structure, else null." },
+    "page_role": { "type": "string", "enum": ["single", "first", "continuation", "last", "blank", "envelope"] },
+    "doc_subtype": { "type": ["string", "null"], "description": "Free text, e.g. 'W-2', 'Form 1098', 'Explanation of Benefits', 'CP2000'." },
+    "language": { "type": "string", "description": "BCP-47, e.g. en, es, fa, de." },
+    "sender": { "$ref": "#/$defs/party" },
+    "recipient": { "$ref": "#/$defs/party" },
+    "document_date": { "type": ["string", "null"], "format": "date" },
+    "due_date": { "type": ["string", "null"], "format": "date", "description": "Pay-by, respond-by, appear-by or renew-by date, whichever the document demands." },
+    "period_start": { "type": ["string", "null"], "format": "date" },
+    "period_end": { "type": ["string", "null"], "format": "date" },
+    "tax_year": { "type": ["integer", "null"] },
+    "amounts": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["label", "value", "currency"],
+        "properties": {
+          "label": { "type": "string", "enum": ["total", "amount_due", "minimum_due", "subtotal", "tax", "paid", "balance", "refund", "premium", "deductible", "patient_responsibility", "wages", "withheld", "interest", "other"] },
+          "value": { "type": "number" },
+          "currency": { "type": "string", "description": "ISO 4217" }
+        }
+      }
+    },
+    "identifiers": {
+      "type": "array",
+      "description": "Reference identifiers that users search by (Class B). Secrets (SSN, full account, routing, card, ID numbers) are never requested; the on-device Redactor already replaced them with last-4 placeholders in the input.",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["kind", "value"],
+        "properties": {
+          "kind": { "type": "string", "enum": ["tax_id_last4", "account_last4", "member_id_last4", "invoice_number", "claim_number", "policy_number", "case_number", "notice_number", "parcel_id", "tracking_number", "order_number", "check_number", "reference", "other"] },
+          "value": { "type": "string" }
+        }
+      }
+    },
+    "people": { "type": "array", "items": { "type": "string" } },
+    "organizations": { "type": "array", "items": { "type": "string" } },
+    "tags": { "type": "array", "items": { "type": "string" }, "description": "3-8 lowercase tags; prefer taxonomy tags from the system prompt." },
+    "title": { "type": "string", "description": "Filename-safe, <= 80 chars, starts with the document date: '2025-03-14 ComEd electricity bill'." },
+    "summary": { "type": "string", "description": "At most two sentences. No reasoning." },
+    "keep_original": { "type": "boolean", "description": "true for vital records, wills, titles, notarized or bearer instruments, undeposited checks, identity documents." },
+    "sensitive": { "type": "boolean", "description": "true for tax, medical, identity, insurance-claim and court classes (drives the high-sensitivity handling path)." },
+    "corrections": {
+      "type": "array",
+      "description": "Line-indexed corrections to the on-device OCR transcript, only where the image clearly contradicts the transcript. Used to patch the search index; never a full re-transcription.",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["line", "text", "reason"],
+        "properties": {
+          "line": { "type": "integer" },
+          "text": { "type": "string" },
+          "reason": { "type": "string", "enum": ["ocr_error", "missing_text", "wrong_number", "wrong_date", "other"] }
+        }
+      }
+    },
+    "confidence": { "type": "number", "description": "0.0-1.0 overall extraction confidence (clamped client-side)." },
+    "needs_review": { "type": "boolean" },
+    "review_reason": { "type": ["string", "null"], "description": "Short phrase, e.g. 'handwritten', 'partially occluded', 'non-Latin script'." }
+  },
+  "$defs": {
+    "party": {
+      "type": "object", "additionalProperties": false,
+      "required": ["name", "address", "email", "phone"],
+      "properties": {
+        "name": { "type": ["string", "null"] },
+        "address": { "type": ["string", "null"] },
+        "email": { "type": ["string", "null"] },
+        "phone": { "type": ["string", "null"] }
+      }
+    }
+  }
+}
