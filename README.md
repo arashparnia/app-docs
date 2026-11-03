@@ -5,6 +5,6 @@ Public support, privacy, and legal pages for Arash Parnia apps.
 - Pack Rat: https://arashparnia.github.io/app-docs/packrat/
 - Sofal: https://arashparnia.github.io/app-docs/sofal/
 
-## Planning (work in progress)
+## Related
 
-- `planning/` holds the research and plan of record for the zero-interaction paper digitizer (name to be chosen). Start with `planning/README.md`. It moves to its own repository once the product is named.
+- Mozakhrafat, the zero-interaction paper digitizer, has its own repository: https://github.com/arashparnia/mozakhrafat (research and plan of record under `planning/`).
